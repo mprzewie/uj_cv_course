@@ -2,12 +2,11 @@ import dataclasses as dc
 from pathlib import Path
 from typing import Optional
 
-from PIL import Image
-import numpy as np
 import imageio
 import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
 from PIL.ImageDraw import Draw
-from cached_property import cached_property
 
 from project.utils.ds.boxes import box_from_single_segmask
 
@@ -32,6 +31,10 @@ class Example:
     def replace(self, **kwargs) -> "Example":
         return dc.replace(self, **kwargs)
 
+    @property
+    def image_array(self) -> np.ndarray:
+        return np.asarray(self.image)
+
 
 @dc.dataclass(frozen=True)
 class BoxedExample(Example):
@@ -50,7 +53,7 @@ class BoxedExample(Example):
             )
         return img
 
-    @cached_property
+    @property
     def normed_boxes(self) -> np.ndarray:
         return self.boxes / np.array([self.image.width, self.image.height, self.image.width, self.image.height])
 
