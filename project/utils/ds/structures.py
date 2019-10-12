@@ -8,7 +8,7 @@ import imageio
 import matplotlib.pyplot as plt
 from PIL.ImageDraw import Draw
 
-from project.utils.box_utils import box_from_single_segmask
+from project.utils.ds.boxes import box_from_single_segmask
 
 _IMAGES_FOLDER_NAME = "images"
 _MASKS_FOLDER_NAME = "masks"
@@ -41,7 +41,8 @@ class BoxedExample(Example):
 
         for box in (self.boxes):
             drawer.rectangle(
-                box.tolist()
+                box.tolist(),
+                width=thickness
             )
         return img
 
