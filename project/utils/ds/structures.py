@@ -1,6 +1,6 @@
 import dataclasses as dc
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 import imageio
 import matplotlib.pyplot as plt
@@ -46,7 +46,7 @@ class BoxedExample(Example):
         img = self.image.copy()
         drawer = Draw(img)
 
-        for box in (self.boxes):
+        for box in self.boxes:
             drawer.rectangle(
                 box.tolist(),
                 width=thickness
@@ -56,6 +56,13 @@ class BoxedExample(Example):
     @property
     def normed_boxes(self) -> np.ndarray:
         return self.boxes / np.array([self.image.width, self.image.height, self.image.width, self.image.height])
+
+    @property
+    def boxes_crops(self) -> List[Image.Image]:
+        return [
+            self.image.crop(b)
+            for b in self.boxes
+        ]
 
 
 @dc.dataclass(frozen=True)
