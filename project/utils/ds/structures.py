@@ -7,6 +7,7 @@ import numpy as np
 import imageio
 import matplotlib.pyplot as plt
 from PIL.ImageDraw import Draw
+from cached_property import cached_property
 
 from project.utils.ds.boxes import box_from_single_segmask
 
@@ -28,6 +29,9 @@ class Example:
             name=path.name
         )
 
+    def replace(self, **kwargs) -> "Example":
+        return dc.replace(self, **kwargs)
+
 
 @dc.dataclass(frozen=True)
 class BoxedExample(Example):
@@ -45,6 +49,10 @@ class BoxedExample(Example):
                 width=thickness
             )
         return img
+
+    @cached_property
+    def normed_boxes(self) -> np.ndarray:
+        return self.boxes / np.array([self.image.width, self.image.height, self.image.width, self.image.height])
 
 
 @dc.dataclass(frozen=True)
