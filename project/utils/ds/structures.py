@@ -64,6 +64,11 @@ class BoxedExample(Example):
             for b in self.boxes
         ]
 
+    @property
+    def normed_boxes_x_y_w_h(self) -> np.ndarray:
+        boxes_x_y_w_h = self.normed_boxes
+        boxes_x_y_w_h[:, 2:4] = boxes_x_y_w_h[:, 2:4] - boxes_x_y_w_h[:, 0:2]
+        return boxes_x_y_w_h
 
 @dc.dataclass(frozen=True)
 class MaskedExample(BoxedExample):
