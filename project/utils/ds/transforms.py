@@ -1,6 +1,5 @@
 from typing import Tuple, Callable
 
-import PIL
 import numpy as np
 import torch
 from PIL import Image, ImageOps
@@ -31,6 +30,7 @@ def keep_mode(transform_fn: BoxedExampleTransform) -> BoxedExampleTransform:
     """
     A decorator which ensures that image mode is not changed during a transformation
     """
+
     def _fn(example: BoxedExample, *args, **kwargs) -> BoxedExample:
         mode = example.image.mode
         return change_image_mode_fn(mode)(
@@ -109,6 +109,16 @@ def rotate(example: BoxedExample, degree=0) -> BoxedExample:
     ]) / 2
     centered_boxes = example.boxes - center_vector
     rot_boxes = (box_rot_mat @ centered_boxes.T).T + center_vector
+    rot_boxes = np.array([
+        [
+            min(x_min, x_max),
+            min(y_min, y_max),
+            max(x_min, x_max),
+            max(y_min, y_max)
+        ]
+        for [x_min, y_min, x_max, y_max]
+        in rot_boxes
+    ])
     return example.replace(
         image=example.image.rotate(degree),
         boxes=rot_boxes
@@ -130,7 +140,7 @@ def flip_color_on_intensity_heuristic(example: BoxedExample) -> BoxedExample:
 
 
 @keep_mode
-def make_max_255(example: BoxedExample) -> BoxedExample:
+def max_pixel_to_255(example: BoxedExample) -> BoxedExample:
     rgb_example = to_rgb(example)
     max_pixel = rgb_example.image_array.max()
     factor = 255 / max_pixel
@@ -138,4 +148,3 @@ def make_max_255(example: BoxedExample) -> BoxedExample:
     return example.replace(image=Image.fromarray(factored.astype("uint8")))
 
 
-# TODO random transformation pipeline
