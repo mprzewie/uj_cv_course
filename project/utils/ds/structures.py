@@ -40,7 +40,7 @@ class Example:
 class BoxedExample(Example):
     boxes: np.ndarray = np.empty((0, 4))
 
-    def vis_boxes(self, thickness: int = 5) -> Image.Image:
+    def vis_boxes(self, thickness: int = 1) -> Image.Image:
         if self.boxes.shape[0] == 0:
             return self.image
         img = self.image.copy()
