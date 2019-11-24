@@ -27,6 +27,20 @@ def to_tensors_tuple(example: BoxedExample) -> Tuple[torch.Tensor, torch.Tensor]
     return ToTensor()(example.image), torch.tensor(example.normed_boxes_x_y_w_h)
 
 
+def keep_mode(transform_fn: BoxedExampleTransform) -> BoxedExampleTransform:
+    """
+    A decorator which ensures that image mode is not changed during a transformation
+    """
+    def _fn(example: BoxedExample, *args, **kwargs) -> BoxedExample:
+        mode = example.image.mode
+        return change_image_mode_fn(mode)(
+            transform_fn(example, *args, **kwargs)
+        )
+
+    return _fn
+
+
+@keep_mode
 def resize(example: BoxedExample, x_factor: float = 1, y_factor: float = 1) -> BoxedExample:
     target_x = int(example.image.width * x_factor)
     target_y = int(example.image.height * y_factor)
@@ -41,6 +55,7 @@ def resize(example: BoxedExample, x_factor: float = 1, y_factor: float = 1) -> B
     )
 
 
+@keep_mode
 def crop(
         example: BoxedExample,
         x_min: float = 0, y_min: float = 0, x_max: float = 1, y_max: float = 1
@@ -75,6 +90,7 @@ def crop(
     )
 
 
+@keep_mode
 def rotate(example: BoxedExample, degree=0) -> BoxedExample:
     angle = - 2 * np.pi * degree / 360
     rot_mat = np.array([
@@ -99,22 +115,27 @@ def rotate(example: BoxedExample, degree=0) -> BoxedExample:
     )
 
 
+@keep_mode
 def flip_color_on_intensity_heuristic(example: BoxedExample) -> BoxedExample:
-    rgb_example = to_rgb(example)
-
-    intensity = np.sqrt((rgb_example.image_array ** 2).sum(axis=2))
-    median_int = np.median(intensity, axis=(0, 1))
-    mean_int = np.mean(intensity, axis=(0, 1))
+    rgb_example_array_normed = to_rgb(example).image_array / 255
+    intensity = np.sqrt((rgb_example_array_normed ** 2).sum(axis=2))
+    median_int = np.median(intensity)
+    mean_int = np.mean(intensity)
     if mean_int < median_int:
-        example = change_image_mode_fn(example.image.mode)(example.replace(
-            image=ImageOps.invert(rgb_example.image)
-        ))
+        example = example.replace(
+            image=ImageOps.invert(to_rgb(example).image)
+        )
 
     return example
 
 
-def normalize_image(mean: float, std: float) -> BoxedExampleTransform:
-    def normalize(example: BoxedExample) -> BoxedExample:
-        pass
+@keep_mode
+def make_max_255(example: BoxedExample) -> BoxedExample:
+    rgb_example = to_rgb(example)
+    max_pixel = rgb_example.image_array.max()
+    factor = 255 / max_pixel
+    factored = rgb_example.image_array * factor
+    return example.replace(image=Image.fromarray(factored.astype("uint8")))
 
-    return normalize
+
+# TODO random transformation pipeline
