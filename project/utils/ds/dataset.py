@@ -15,7 +15,8 @@ transform_chain = [
     rnd.random_transform(tr.rotate, rnd.rotate_90_sampler()),
     rnd.random_transform(tr.rotate, rnd.rotate_sampler(amplitude=15)),
     rnd.random_transform(tr.resize, rnd.resize_sampler(amplitude=0.5)),
-    rnd.random_transform(tr.crop, rnd.constant_crop_size_sampler(crop_size=0.7)),
+    tr.resize_to_min_300,
+    rnd.random_transform(tr.crop, rnd.constant_crop_size_sampler(crop_size=256/300)),
     # tr.to_tensors_tuple
 ]
 

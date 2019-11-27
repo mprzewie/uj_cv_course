@@ -148,3 +148,12 @@ def max_pixel_to_255(example: BoxedExample) -> BoxedExample:
     return example.replace(image=Image.fromarray(factored.astype("uint8")))
 
 
+@keep_mode
+def resize_to_min_300(example: BoxedExample) -> BoxedExample:
+    min_size = min(
+        example.image.width, example.image.height
+    )
+    if min_size < 300:
+        factor = 300 / min_size
+        return resize(example, factor, factor)
+    return example
