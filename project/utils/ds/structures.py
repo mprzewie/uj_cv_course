@@ -40,7 +40,7 @@ class Example:
 class BoxedExample(Example):
     boxes: np.ndarray = np.empty((0, 4))
 
-    def vis_boxes(self, thickness: int = 1) -> Image.Image:
+    def vis_boxes(self, thickness: int = 2) -> Image.Image:
         if self.boxes.shape[0] == 0:
             return self.image
         img = self.image.copy()
@@ -49,7 +49,8 @@ class BoxedExample(Example):
         for box in self.boxes:
             drawer.rectangle(
                 box.tolist(),
-                width=thickness
+                width=thickness,
+                outline="white"
             )
         return img
 
@@ -70,24 +71,27 @@ class BoxedExample(Example):
         boxes_x_y_w_h[:, 2:4] = boxes_x_y_w_h[:, 2:4] - boxes_x_y_w_h[:, 0:2]
         return boxes_x_y_w_h
 
+
 @dc.dataclass(frozen=True)
 class MaskedExample(BoxedExample):
-    masks: Optional[np.ndarray] = np.empty(0)
+    masks: Optional[List[Image.Image]] = dc.field(default_factory=list)
 
     @classmethod
     def from_path(cls, path: Path):
         obj: MaskedExample = super().from_path(path)
-        masks = np.empty((0, obj.image.size[0], obj.image.size[1]))
+        masks = []
         boxes = np.empty((0, 4))
 
         mask_path = path / _MASKS_FOLDER_NAME
 
         if mask_path.exists():
-            masks = np.array([
-                (imageio.imread(m) != 0).astype(int) for m in sorted(list(mask_path.iterdir()))
+            masks_arrays = np.array([
+                (imageio.imread(m) != 0).astype("uint8") for m in sorted(list(mask_path.iterdir()))
             ])
+            masks = [Image.fromarray(m)  for m in masks_arrays]
+
             boxes = np.array([
-                box_from_single_segmask(m)
+                box_from_single_segmask(np.array(m))
                 for m in masks
             ])
         return dc.replace(
@@ -96,8 +100,12 @@ class MaskedExample(BoxedExample):
             boxes=boxes
         )
 
+    @property
+    def mask_array(self) -> np.ndarray:
+        return np.array([np.array(mimg) for mimg in self.masks])
+
     def vis_segmasks(self, alpha: float = 0.5):
-        masks = self.masks.sum(axis=0)
+        masks = self.mask_array.sum(axis=0)
 
         plt.imshow(self.image)
         plt.imshow(masks, alpha=alpha)

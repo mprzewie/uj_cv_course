@@ -6,7 +6,7 @@ from PIL import Image, ImageOps
 from torchvision.transforms import ToTensor
 
 from project.utils.ds.boxes import areas
-from project.utils.ds.structures import BoxedExample
+from project.utils.ds.structures import BoxedExample, MaskedExample
 
 BoxedExampleTransform = Callable[[BoxedExample], BoxedExample]
 
@@ -19,11 +19,16 @@ def change_image_mode_fn(mode: str) -> BoxedExampleTransform:
 
 
 to_rgb = change_image_mode_fn("RGB")
-to_grayscale = change_image_mode_fn("LA")
+to_grayscale = change_image_mode_fn("L")
 
 
-def to_tensors_tuple(example: BoxedExample) -> Tuple[torch.Tensor, torch.Tensor]:
+def to_tensors_boxes_tuple(example: BoxedExample) -> Tuple[torch.Tensor, torch.Tensor]:
     return ToTensor()(example.image), torch.tensor(example.normed_boxes_x_y_w_h)
+
+
+def to_tensors_boxes_masks_tuple(example: MaskedExample) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    return ToTensor()(example.image), torch.tensor(example.normed_boxes_x_y_w_h), torch.tensor(
+        example.mask_array).long()
 
 
 def keep_mode(transform_fn: BoxedExampleTransform) -> BoxedExampleTransform:
@@ -40,7 +45,27 @@ def keep_mode(transform_fn: BoxedExampleTransform) -> BoxedExampleTransform:
     return _fn
 
 
+def transform_masks_like_image(transform_fn: BoxedExampleTransform) -> BoxedExampleTransform:
+    def _fn(example: BoxedExample, *args, **kwargs) -> BoxedExample:
+        transformed_example = transform_fn(example, *args, **kwargs)
+
+        if isinstance(example, MaskedExample):
+            if example.masks is not None:
+                mask_examples = [
+                    example.replace(image=m) for m in example.masks
+                ]
+                transformed_masked_examples = [
+                    transform_fn(me, *args, **kwargs) for me in mask_examples
+                ]
+                transformed_example = transformed_example.replace(
+                    masks=[me.image for me in transformed_masked_examples])
+        return transformed_example
+
+    return _fn
+
+
 @keep_mode
+@transform_masks_like_image
 def resize(example: BoxedExample, x_factor: float = 1, y_factor: float = 1) -> BoxedExample:
     target_x = int(example.image.width * x_factor)
     target_y = int(example.image.height * y_factor)
@@ -56,6 +81,7 @@ def resize(example: BoxedExample, x_factor: float = 1, y_factor: float = 1) -> B
 
 
 @keep_mode
+@transform_masks_like_image
 def crop(
         example: BoxedExample,
         x_min: float = 0, y_min: float = 0, x_max: float = 1, y_max: float = 1
@@ -91,6 +117,7 @@ def crop(
 
 
 @keep_mode
+@transform_masks_like_image
 def rotate(example: BoxedExample, degree=0) -> BoxedExample:
     angle = - 2 * np.pi * degree / 360
     rot_mat = np.array([
@@ -120,7 +147,7 @@ def rotate(example: BoxedExample, degree=0) -> BoxedExample:
         in rot_boxes
     ])
     return example.replace(
-        image=example.image.rotate(degree),
+        image=example.image.rotate(degree, fillcolor="black"),
         boxes=rot_boxes
     )
 
@@ -149,6 +176,7 @@ def max_pixel_to_255(example: BoxedExample) -> BoxedExample:
 
 
 @keep_mode
+@transform_masks_like_image
 def resize_to_min_300(example: BoxedExample) -> BoxedExample:
     min_size = min(
         example.image.width, example.image.height
