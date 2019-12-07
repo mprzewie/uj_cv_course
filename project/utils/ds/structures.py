@@ -33,7 +33,7 @@ class Example:
 
     @property
     def image_array(self) -> np.ndarray:
-        return np.asarray(self.image)
+        return np.asarray(self.image, dtype=float)
 
 
 @dc.dataclass(frozen=True)
