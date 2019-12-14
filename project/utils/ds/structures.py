@@ -110,3 +110,11 @@ class MaskedExample(BoxedExample):
         plt.imshow(self.image)
         plt.imshow(masks, alpha=alpha)
         plt.show()
+
+    @property
+    def as_boxed_example(self) -> BoxedExample:
+        return BoxedExample(
+            self.image,
+            self.name,
+            self.boxes
+        )

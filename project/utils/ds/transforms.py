@@ -95,7 +95,7 @@ def crop(
         int(example.image.height * y) for y in [y_min, y_max]
     ]
 
-    cropped_boxes = np.array([
+    cropped_boxes = (np.array([
         [
             min(max(xmin, abs_x_min), abs_x_max),
             min(max(ymin, abs_y_min), abs_y_max),
@@ -106,7 +106,7 @@ def crop(
         in example.boxes
     ]) - np.array([
         abs_x_min, abs_y_min, abs_x_min, abs_y_min
-    ])
+    ])) if len(example.boxes) > 0 else np.empty((0, 4))
 
     cropped_boxes = cropped_boxes[areas(cropped_boxes) > 0]
 

@@ -42,7 +42,7 @@ class BoxedExamplesDataset(Dataset):
     def from_path(cls, path: Path, **kwargs):
         return cls(
             [
-                MaskedExample.from_path(p)  # .replace(masks=None)
+                MaskedExample.from_path(p).as_boxed_example
                 for p in tqdm(path.iterdir())
             ],
             **kwargs
@@ -71,3 +71,4 @@ class LazyMaskedExamplesDataset(Dataset):
 
     def ith_example(self, i: int) -> BoxedExample:
         return MaskedExample.from_path(self.examples_paths[i])
+
