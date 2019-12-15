@@ -14,7 +14,7 @@ def to_model_input(
     features = ToTensor()(example.image)
     labels = {
         "boxes": torch.tensor(example.boxes).float(),
-        "labels": torch.tensor([0] * example.boxes.shape[0]),
+        "labels": torch.tensor([1] * example.boxes.shape[0]), # PyTorch seems to think 0 is background
         "image_id": torch.tensor(example.id),
         "area": torch.tensor(areas(example.boxes)),
         "iscrowd": torch.tensor([0] * example.boxes.shape[0])
