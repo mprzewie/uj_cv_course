@@ -17,13 +17,15 @@ _MASKS_FOLDER_NAME = "masks"
 @dc.dataclass(frozen=True)
 class Example:
     image: Image.Image
+    id: int
     name: str = ""
 
     @classmethod
-    def from_path(cls, path: Path):
+    def from_path(cls, path: Path, image_id: int):
         image_files = list((path / _IMAGES_FOLDER_NAME).iterdir())
 
         return cls(
+            id=image_id,
             image=Image.open(image_files[0]),
             name=path.name
         )
@@ -77,8 +79,8 @@ class MaskedExample(BoxedExample):
     masks: Optional[List[Image.Image]] = dc.field(default_factory=list)
 
     @classmethod
-    def from_path(cls, path: Path):
-        obj: MaskedExample = super().from_path(path)
+    def from_path(cls, path: Path, image_id: int):
+        obj: MaskedExample = super().from_path(path, image_id)
         masks = []
         boxes = np.empty((0, 4))
 
@@ -115,6 +117,7 @@ class MaskedExample(BoxedExample):
     def as_boxed_example(self) -> BoxedExample:
         return BoxedExample(
             self.image,
+            self.id,
             self.name,
             self.boxes
         )

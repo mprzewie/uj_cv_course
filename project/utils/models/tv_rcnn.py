@@ -4,6 +4,7 @@ from typing import Dict, Tuple
 import torch
 from torchvision.transforms import ToTensor
 
+from project.utils.ds.boxes import areas
 from project.utils.ds.structures import BoxedExample
 
 
@@ -13,6 +14,9 @@ def to_model_input(
     features = ToTensor()(example.image)
     labels = {
         "boxes": torch.tensor(example.boxes).float(),
-        "labels": torch.tensor([0] * example.boxes.shape[0])
+        "labels": torch.tensor([0] * example.boxes.shape[0]),
+        "image_id": torch.tensor(example.id),
+        "area": torch.tensor(areas(example.boxes)),
+        "iscrowd": torch.tensor([0] * example.boxes.shape[0])
     }
     return features, labels
