@@ -32,7 +32,7 @@ def model_input_to_boxed_example(
     denormalized_img = (img_tensor.permute(1, 2, 0) * torch.tensor(normalization_transform.std)) + torch.tensor(
         normalization_transform.mean)
     return BoxedExample(
-        image=Image.fromarray((denormalized_img.numpy() * 256).astype(np.uint8)),
+        image=Image.fromarray((denormalized_img.numpy() * 255).astype(np.uint8)),
         id=int(labels["image_id"]),
         boxes=labels["boxes"].numpy()
     )
