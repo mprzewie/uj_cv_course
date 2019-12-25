@@ -71,4 +71,3 @@ class LazyMaskedExamplesDataset(Dataset):
 
     def ith_example(self, i: int) -> BoxedExample:
         return MaskedExample.from_path(self.examples_paths[i], i)
-
