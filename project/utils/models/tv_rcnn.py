@@ -4,6 +4,8 @@ from typing import Dict, Tuple
 import numpy as np
 import torch
 from PIL import Image
+from torch.utils.data.dataloader import DataLoader
+from torchvision.models.detection import FasterRCNN
 from torchvision.transforms import ToTensor, Normalize
 
 from project.utils.ds.boxes import areas
@@ -36,3 +38,53 @@ def model_input_to_boxed_example(
         id=int(labels["image_id"]),
         boxes=labels["boxes"].numpy()
     )
+
+
+def evaluate_for_losses(
+        model: FasterRCNN,
+        data_loader: DataLoader,
+        device: torch.device
+) -> Dict[str, float]:
+    model = model.to(device)
+    model.train()
+    loss_dicts = []
+    with torch.no_grad():
+        for (img, labels) in data_loader:
+            img = list(image.to(device) for image in img)
+            labels = [{k: v.to(device) for k, v in t.items()} for t in labels]
+
+            loss_dicts.append(model(img, labels))
+
+    return {
+        k: np.mean([
+            ld[k].cpu().item()
+            for ld in loss_dicts
+        ])
+        for k in loss_dicts[0].keys()
+    }
+
+
+def coco_eval_metrics(coco_eval_obj: "CocoEvaluator") -> Dict[str, float]:
+    """
+    Summarization object
+    https://blog.zenggyu.com/en/post/2018-12-16/an-introduction-to-evaluation-metrics-for-object-detection/
+    """
+    metrics_names = [
+        "Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]",
+        "Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ]",
+        "Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ]",
+        "Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]",
+        "Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]",
+        "Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ]",
+        "Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] ",
+    ]
+
+    return {
+        mn: coco_eval_obj.coco_eval["bbox"].stats[i]
+        for (i, mn) in enumerate(metrics_names)
+    }
