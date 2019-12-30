@@ -1,5 +1,5 @@
 """utilities for torchvision *RCNN models"""
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 import torch
@@ -7,6 +7,7 @@ from PIL import Image
 from torch.utils.data.dataloader import DataLoader
 from torchvision.models.detection import FasterRCNN
 from torchvision.transforms import ToTensor, Normalize
+from tqdm import tqdm
 
 from project.utils.ds.boxes import areas
 from project.utils.ds.structures import BoxedExample
@@ -49,7 +50,7 @@ def evaluate_for_losses(
     model.train()
     loss_dicts = []
     with torch.no_grad():
-        for (img, labels) in data_loader:
+        for (img, labels) in tqdm(data_loader):
             img = list(image.to(device) for image in img)
             labels = [{k: v.to(device) for k, v in t.items()} for t in labels]
 
@@ -88,3 +89,32 @@ def coco_eval_metrics(coco_eval_obj: "CocoEvaluator") -> Dict[str, float]:
         mn: coco_eval_obj.coco_eval["bbox"].stats[i]
         for (i, mn) in enumerate(metrics_names)
     }
+
+
+def model_predictions_from_single_batch(
+        model: FasterRCNN, data_loader: DataLoader, device: torch.device,
+        normalization_transform: Normalize = Normalize([1, 1, 1], [1, 1, 1])
+) -> List[Tuple[BoxedExample, BoxedExample]]:
+    model = model.to(device).eval()
+    with torch.no_grad():
+        for (img, labels) in data_loader:
+            break
+
+        outputs = model([i.to(device) for i in img])
+        input_examples = [
+            model_input_to_boxed_example(
+                (im, l),
+                normalization_transform
+            )
+            for (im, l) in zip(img, labels)
+        ]
+
+        output_examples = [
+            i.replace(boxes=o["boxes"].cpu().numpy())
+
+            for (i, o) in zip(input_examples, outputs)
+        ]
+
+    return list(zip(input_examples, output_examples))
+
+
