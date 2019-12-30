@@ -44,16 +44,18 @@ def model_input_to_boxed_example(
 def evaluate_for_losses(
         model: FasterRCNN,
         data_loader: DataLoader,
-        device: torch.device
+        device: torch.device,
+        max_n_batches: int = 1
 ) -> Dict[str, float]:
     model = model.to(device)
     model.train()
     loss_dicts = []
     with torch.no_grad():
-        for (img, labels) in tqdm(data_loader):
+        for i, (img, labels) in enumerate(tqdm(data_loader)):
+            if i >= max_n_batches:
+                break
             img = list(image.to(device) for image in img)
             labels = [{k: v.to(device) for k, v in t.items()} for t in labels]
-
             loss_dicts.append(model(img, labels))
 
     return {
@@ -91,29 +93,31 @@ def coco_eval_metrics(coco_eval_obj: "CocoEvaluator") -> Dict[str, float]:
     }
 
 
-def model_predictions_from_single_batch(
-        model: FasterRCNN, data_loader: DataLoader, device: torch.device,
+def model_predictions_from_loader(
+        model: FasterRCNN, data_loader: DataLoader, device: torch.device, max_n_batches=1,
         normalization_transform: Normalize = Normalize([1, 1, 1], [1, 1, 1])
 ) -> List[Tuple[BoxedExample, BoxedExample]]:
     model = model.to(device).eval()
+    input_examples = []
+    output_examples = []
     with torch.no_grad():
-        for (img, labels) in data_loader:
-            break
+        for i, (img, labels) in enumerate(data_loader):
+            if i >= max_n_batches:
+                break
+            outputs = model([i.to(device) for i in img])
+            input_examples.extend([
+                model_input_to_boxed_example(
+                    (im, l),
+                    normalization_transform
+                )
+                for (im, l) in zip(img, labels)
+            ])
 
-        outputs = model([i.to(device) for i in img])
-        input_examples = [
-            model_input_to_boxed_example(
-                (im, l),
-                normalization_transform
-            )
-            for (im, l) in zip(img, labels)
-        ]
+            output_examples.extend([
+                i.replace(boxes=o["boxes"].cpu().numpy())
 
-        output_examples = [
-            i.replace(boxes=o["boxes"].cpu().numpy())
-
-            for (i, o) in zip(input_examples, outputs)
-        ]
+                for (i, o) in zip(input_examples, outputs)
+            ])
 
     return list(zip(input_examples, output_examples))
 
