@@ -105,19 +105,22 @@ def model_predictions_from_loader(
             if i >= max_n_batches:
                 break
             outputs = model([i.to(device) for i in img])
-            input_examples.extend([
+
+            input_exs = [
                 model_input_to_boxed_example(
                     (im, l),
                     normalization_transform
                 )
                 for (im, l) in zip(img, labels)
-            ])
-
-            output_examples.extend([
+            ]
+            output_exs = [
                 i.replace(boxes=o["boxes"].cpu().numpy())
 
-                for (i, o) in zip(input_examples, outputs)
-            ])
+                for (i, o) in zip(input_exs, outputs)
+            ]
+
+            input_examples.extend(input_exs)
+            output_examples.extend(output_exs)
 
     return list(zip(input_examples, output_examples))
 
